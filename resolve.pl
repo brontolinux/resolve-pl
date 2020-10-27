@@ -35,9 +35,9 @@ ENTRY:  foreach my $entry (@ARGV) {
             }
 
             my %results ;
-            $results{entry} = $entry ;
-            $results{aliases} = $info->{canonname} if exists $info->{canonname} ;
-            $results{addrs} = [ $address ] ;
+            $results{entry}    = $entry ;
+            $results{aliases}  = $info->{canonname} if exists $info->{canonname} ;
+            $results{addrs}    = [ $address ] ;
             $results{addrtype} = $info->{family} ;
             report_results(%results) ;
         }
@@ -45,23 +45,27 @@ ENTRY:  foreach my $entry (@ARGV) {
     }
 
     else {
-        my ( $name,   $aliases,  $addrtype,  $length,  @addrs ) ;
-        if ($entry_type == 4) {
-            my $entry_address = inet_pton(AF_INET,$entry) ;
-            ( $name,   $aliases,  $addrtype,  $length,  @addrs ) = gethostbyaddr($entry_address, AF_INET) ;
+        # IP address, can be v4 or v6, we don't care.
+        my ($err, @addrinfo) = getaddrinfo($entry,"", { protocol => IPPROTO_TCP, flags => AI_NUMERICHOST }) ;
+        if ($err) {
+            report_error($entry,$err) ;
+            next ENTRY ;
         }
 
-        if ($entry_type == 6) {
-            my $entry_address = inet_pton(AF_INET6,$entry) ;
-            ( $name,   $aliases,  $addrtype,  $length,  @addrs ) = gethostbyaddr($entry_address, AF_INET6) ;
-        }
+        ADDRINFO:   foreach my $info (@addrinfo) {
+            my ($err, $hostname, $servicename) = getnameinfo($info->{addr},, NIx_NOSERV);
 
-        my %results ;
-        $results{entry} = $entry ;
-        $results{aliases} = $aliases if $aliases ;
-        $results{addrs} = \@addrs ;
-        $results{addrtype} = $addrtype ;
-        report_results(%results) ;
+            if ($err) {
+                report_error($entry,$err) ;
+                next ADDRINFO ;
+            }
+
+            my %results ;
+            $results{entry}    = $entry ;
+            $results{name}     = $hostname ;
+            $results{addrs}    = [] ;
+            report_results(%results) ;
+        }
     }
 
     
@@ -71,12 +75,17 @@ sub report_results {
     my %parms = @_ ;
 
     my $entry    = $parms{entry} ;
+    my $name     = $parms{name} ;
     my $aliases  = $parms{aliases} ;
     my @addrs    = @{ $parms{addrs} } ;
     my $addrtype = $parms{addrtype} ;
 
     if (defined $aliases and $entry ne $aliases) {
-        say "$entry aliases $aliases" if defined $aliases ;
+        say "$entry alias $aliases" if defined $aliases ;
+    }
+
+    if (defined $name) {
+        say "$entry name $name" ;
     }
 
     foreach my $address (@addrs) {
