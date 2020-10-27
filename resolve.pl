@@ -20,7 +20,7 @@ ENTRY:  foreach my $entry (@ARGV) {
 
     if (not defined $entry_type) {
         # not an address, so probably a name?
-        my ($err, @addrinfo) = getaddrinfo($entry, "", {protocol => IPPROTO_TCP });
+        my ($err, @addrinfo) = getaddrinfo($entry, "", {protocol => IPPROTO_TCP, flags => AI_CANONNAME });
         if ($err) {
             report_error($entry,$err) ;
             next ENTRY ;
@@ -29,20 +29,10 @@ ENTRY:  foreach my $entry (@ARGV) {
         ADDRINFO:   foreach my $info (@addrinfo) {
             my %results ;
             $results{entry} = $entry ;
-            $results{name} = $entry ;
             $results{aliases} = $info->{canonname} if exists $info->{canonname} ;
             $results{addrs} = [ $info->{addr} ] ;
             $results{addrtype} = $info->{family} ;
             report_results(%results) ;
-            next ADDRINFO ;
-            
-            ##! remove later if not needed
-            my ($err, $ipaddr) = getnameinfo($info->{addr}, NI_NUMERICHOST, NIx_NOSERV);
-            if ($err) {
-                report_error($entry,$err) ;
-                next ENTRY ;
-            }
-
         }
     }
 
@@ -65,12 +55,13 @@ sub report_results {
     my %parms = @_ ;
 
     my $entry    = $parms{entry} ;
-    my $name     = exists $parms{name} ? $parms{name} : "is undefined" ;
     my $aliases  = $parms{aliases} ;
     my @addrs    = @{ $parms{addrs} } ;
     my $addrtype = $parms{addrtype} ;
 
-    say "$entry name $name" ;
+    if (defined $aliases and $entry ne $aliases) {
+        say "$entry aliases $aliases" if defined $aliases ;
+    }
 
     foreach my $packed_address (@addrs) {
         my ($error, $address) = getnameinfo($packed_address, NI_NUMERICHOST, NIx_NOSERV) ;
@@ -81,7 +72,6 @@ sub report_results {
         say "$entry $address_type_cleartext{$addrtype} $address" ;
     }
 
-    say "$name aliases $aliases" if $aliases ;
 }
 
 sub report_error {
