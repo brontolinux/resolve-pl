@@ -5,9 +5,8 @@ use warnings ;
 
 use v5.10.1 ;
 
-#use Socket qw(inet_ntop inet_pton AF_INET AF_INET6);
 use Carp ;
-use Socket qw(:DEFAULT :addrinfo IPPROTO_TCP inet_ntop inet_pton);
+use Socket qw(:DEFAULT :addrinfo IPPROTO_TCP);
 use Net::IP qw(ip_get_version);
 
 my %address_type_cleartext ;
@@ -37,7 +36,7 @@ ENTRY:  foreach my $entry (@ARGV) {
             my %results ;
             $results{entry}    = $entry ;
             $results{aliases}  = $info->{canonname} if exists $info->{canonname} ;
-            $results{addrs}    = [ $address ] ;
+            $results{addrs}    = $address ;
             $results{addrtype} = $info->{family} ;
             report_results(%results) ;
         }
@@ -63,7 +62,6 @@ ENTRY:  foreach my $entry (@ARGV) {
             my %results ;
             $results{entry}    = $entry ;
             $results{name}     = $hostname ;
-            $results{addrs}    = [] ;
             report_results(%results) ;
         }
     }
@@ -77,7 +75,7 @@ sub report_results {
     my $entry    = $parms{entry} ;
     my $name     = $parms{name} ;
     my $aliases  = $parms{aliases} ;
-    my @addrs    = @{ $parms{addrs} } ;
+    my $address  = $parms{addrs} ;
     my $addrtype = $parms{addrtype} ;
 
     if (defined $aliases and $entry ne $aliases) {
@@ -88,7 +86,7 @@ sub report_results {
         say "$entry name $name" ;
     }
 
-    foreach my $address (@addrs) {
+    if (defined $address) {
         say "$entry $address_type_cleartext{$addrtype} $address" ;
     }
 
