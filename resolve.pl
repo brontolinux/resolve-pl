@@ -61,7 +61,7 @@ ENTRY:  foreach my $entry (@ARGV) {
 
             my %results ;
             $results{entry}    = $entry ;
-            $results{name}     = $hostname ;
+            $results{name}     = $hostname eq $entry? "UNDEFINED": $hostname ;
             report_results(%results) ;
         }
     }

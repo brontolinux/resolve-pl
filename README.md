@@ -69,7 +69,7 @@ or not, depending on how the mapping is done and/or if there is a mapping at all
 $ resolve raspberry-b.local
 raspberry-b.local ipv4 192.168.100.193
 $ resolve 192.168.100.193  
-192.168.100.193 name 192.168.100.193
+192.168.100.193 name UNDEFINED
 $ 
 ```
 
