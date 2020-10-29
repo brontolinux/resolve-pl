@@ -13,17 +13,53 @@ Reality proved different. In particular, `gethostby*` functions work well enough
 you resolve a name, say `www.google.com` with `gethostbyname`). The solution involved using the `Socket` module's `getaddrinfo` and `getnameinfo`,
 whose interface is more complex than the good old `gethostby*` functions. I reworked the script reluctantly, and finally I managed to make it work.
 
+## Differences between `resolve` and `getent hosts`
+
+As [Petru Ratiu told me on LinkedIn](https://www.linkedin.com/feed/update/urn:li:activity:6727162430654304256), this tool is basically replicating the functionality of the UNIX command `getent hosts`. That was not intended. In fact, and despite I've been using UNIX systems since at least 1995, I didn't know the command at all -- if I did, I probably had never created resolve. But since I did, here are the differences:
+
+* The output of `getent hosts` mimics the format of `/etc/hosts`: first comes the address, then the hostname and aliases, if any; the output of `resolve` is: the queried entry first, then the type of response, then the response, e.g.:
+```
+$ resolve www.google.com
+www.google.com ipv4 216.58.207.228
+www.google.com ipv6 2a00:1450:400f:80d::2004
+$ getent hosts www.google.com
+2a00:1450:400f:80d::2004 www.google.com
+$ 
+```
+Notice also how `getent hosts` only returned the IPv6 address.
+
+* Unresolved entries are silently skipped by `getent hosts`, while `resolve` reports what's wrong with them, e.g.:
+```
+$ resolve www.rikstv.no foo.bar www.strim.no
+www.rikstv.no alias commo-lbext-qh8b9sllo4hw-787619066.eu-west-1.elb.amazonaws.com
+www.rikstv.no ipv4 54.228.16.94
+www.rikstv.no ipv4 54.78.23.144
+foo.bar error Name or service not known
+www.strim.no ipv4 143.204.55.19
+www.strim.no ipv4 143.204.55.72
+www.strim.no ipv4 143.204.55.46
+www.strim.no ipv4 143.204.55.126
+$ getent hosts www.rikstv.no foo.bar www.strim.no
+54.228.16.94    commo-lbext-qh8b9sllo4hw-787619066.eu-west-1.elb.amazonaws.com www.rikstv.no web-epi--ext-pm-aeuw1.rikstv.no
+54.78.23.144    commo-lbext-qh8b9sllo4hw-787619066.eu-west-1.elb.amazonaws.com www.rikstv.no web-epi--ext-pm-aeuw1.rikstv.no
+143.204.55.46   www.strim.no
+143.204.55.72   www.strim.no
+143.204.55.126  www.strim.no
+143.204.55.19   www.strim.no
+$ 
+```
+
+* The two tools use different system functions: where [`getent hosts` uses `gethostsbyaddr` and `gethostsbyname2`](https://manpages.debian.org/buster/manpages/getent.1.en.html), `resolve` uses `getaddrinfo` (which, by the way, is used by `getent ahosts`) and `getnameinfo`.
+
 ## Installation
+
+This script uses only Perl Core modules, so all you need to use it is the **Perl interpreter** itself, **version 5.10.1 or above**. I don't think there are many places where versions lower than that are still in use, but in case you are using one of those versions and you still
+want to use resolve, then just replace all `say "string"` in the code with `print "string\n"` and you are good to go.
 
 ### On UNIX-like systems
 
-1. ensure you have the Net::IP module installed[*]
-2. copy the script in a directory in your path; I suggest you rename it to `resolve`, e.g.: ```cp resolve.pl /usr/local/bin/resolve```
-3. ensure the correct permissions for the script, e.g. ```chmod 755 /usr/local/bin/resolve```
-
-[*] Net::IP is the only non-core module that is used by this script, and for only one thing: checking if the arguments passed on the command line are
-IPv4/IPv6 addresses or not. There may be ways to do that and by using only core modules: you are welcome to submit a pull request, as I am not sure I
-will have time in the future to invest into lightening this script.
+1. copy the script in a directory in your path; I suggest you rename it to `resolve`, e.g.: ```cp resolve.pl /usr/local/bin/resolve```
+2. ensure the correct permissions for the script, e.g. ```chmod 755 /usr/local/bin/resolve```
 
 ### On other operating systems
 
